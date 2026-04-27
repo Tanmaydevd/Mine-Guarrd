@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mine Guard — Wearable Safety Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --mine-bg: #0a0c0f;
+  --mine-surface: #111418;
+  --mine-card: #161b22;
+  --mine-border: #2a3040;
+  --mine-amber: #f0a500;
+  --mine-amber-dim: #8a5e00;
+  --mine-red: #e53e3e;
+  --mine-red-dim: #7a1f1f;
+  --mine-green: #2ea44f;
+  --mine-green-dim: #1a5c30;
+  --mine-blue: #1e7bd4;
+  --mine-text: #e6eaf0;
+  --mine-muted: #7a8499;
+  --mine-warning-bg: rgba(240,165,0,0.08);
+  --mine-danger-bg: rgba(229,62,62,0.08);
+  --ff-head: 'Rajdhani', sans-serif;
+  --ff-mono: 'IBM Plex Mono', monospace;
+}
+html, body { height: 100%; background: var(--mine-bg); color: var(--mine-text); font-family: var(--ff-head); }
+#app { min-height: 100vh; }
+
+/* ====== LOGIN ====== */
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--mine-bg); padding: 2rem; position: relative; overflow: hidden; }
+#login-screen::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(240,165,0,0.05) 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.login-box { width: 100%; max-width: 440px; background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 14px; padding: 2.5rem; position: relative; overflow: hidden; animation: fadeUp 0.4s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.login-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--mine-amber), #ff6b00, var(--mine-amber)); }
+.login-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 2rem; }
+.login-icon-wrap { width: 46px; height: 46px; background: var(--mine-amber); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.login-title { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+.login-sub { font-size: 11px; color: var(--mine-muted); font-family: var(--ff-mono); margin-top: 2px; letter-spacing: 0.5px; }
+.section-label { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+.role-btn { background: var(--mine-surface); border: 1px solid var(--mine-border); border-radius: 10px; padding: 1.1rem 0.8rem; cursor: pointer; text-align: center; transition: all 0.2s; font-family: var(--ff-head); color: var(--mine-muted); }
+.role-btn:hover { border-color: var(--mine-amber); color: var(--mine-text); background: rgba(240,165,0,0.04); }
+.role-btn.active { border-color: var(--mine-amber); background: var(--mine-warning-bg); color: var(--mine-amber); }
+.role-btn .role-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+.role-btn .role-name { font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+.role-btn .role-desc { font-size: 11px; margin-top: 4px; opacity: 0.7; font-family: var(--ff-mono); }
+.login-field { margin-bottom: 1rem; }
+.login-field label { display: block; font-size: 11px; color: var(--mine-muted); font-family: var(--ff-mono); margin-bottom: 6px; letter-spacing: 0.5px; }
+.login-field input { width: 100%; background: var(--mine-surface); border: 1px solid var(--mine-border); border-radius: 8px; padding: 11px 14px; color: var(--mine-text); font-family: var(--ff-mono); font-size: 14px; outline: none; transition: border-color 0.2s; }
+.login-field input:focus { border-color: var(--mine-amber); }
+.login-btn { width: 100%; background: var(--mine-amber); color: #000; border: none; border-radius: 8px; padding: 13px; font-family: var(--ff-head); font-size: 16px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 0.5rem; }
+.login-btn:hover { opacity: 0.88; }
+.login-btn:active { transform: scale(0.99); }
+.login-hint { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); text-align: center; margin-top: 1rem; }
+
+/* ====== TOPBAR ====== */
+.topbar { display: flex; align-items: center; justify-content: space-between; background: var(--mine-card); border-bottom: 1px solid var(--mine-border); padding: 0 1.5rem; height: 58px; position: sticky; top: 0; z-index: 50; }
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-icon { width: 34px; height: 34px; background: var(--mine-amber); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.topbar-title { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+.topbar-badge { font-size: 10px; font-family: var(--ff-mono); border-radius: 4px; padding: 3px 8px; letter-spacing: 0.5px; font-weight: 500; }
+.badge-emp { background: var(--mine-amber-dim); color: var(--mine-amber); }
+.badge-sup { background: #1a2a4a; color: #60a5fa; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.topbar-user { font-size: 12px; color: var(--mine-muted); font-family: var(--ff-mono); }
+.topbar-logout { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); background: none; border: 1px solid var(--mine-border); border-radius: 5px; padding: 5px 12px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; }
+.topbar-logout:hover { border-color: var(--mine-red); color: var(--mine-red); }
+.conn-pill { font-size: 10px; font-family: var(--ff-mono); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+.conn-live { background: rgba(46,164,79,0.15); color: #5fcf82; }
+.conn-sim  { background: rgba(122,132,153,0.15); color: var(--mine-muted); }
+
+/* ====== SHARED ====== */
+.dash-body { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+
+/* ====== EMPLOYEE DASHBOARD ====== */
+#emp-dashboard { display: none; }
+.status-bar { display: flex; align-items: center; justify-content: space-between; background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 10px; padding: 12px 18px; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px; }
+.status-bar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mine-green); flex-shrink: 0; animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.status-text { font-size: 12px; font-family: var(--ff-mono); color: var(--mine-muted); }
+.status-id { font-size: 12px; font-family: var(--ff-mono); color: var(--mine-amber); font-weight: 500; }
+.sync-time { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); }
+.alert-banner { border-radius: 10px; padding: 13px 18px; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 12px; font-family: var(--ff-mono); font-size: 13px; border-left: 4px solid; transition: all 0.4s; }
+.alert-banner.danger { background: var(--mine-danger-bg); border-color: var(--mine-red); color: #ff7b7b; }
+.alert-banner.warning { background: var(--mine-warning-bg); border-color: var(--mine-amber); color: var(--mine-amber); }
+.alert-banner.safe { background: rgba(46,164,79,0.08); border-color: var(--mine-green); color: #5fcf82; }
+.alert-icon { font-size: 20px; flex-shrink: 0; margin-top: -1px; }
+.alert-msg strong { display: block; font-weight: 500; margin-bottom: 3px; }
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(162px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+.sensor-card { background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.4s; }
+.sensor-card.warn { border-color: var(--mine-amber-dim); }
+.sensor-card.danger { border-color: var(--mine-red-dim); animation: cardAlert 1.2s infinite alternate; }
+@keyframes cardAlert { from{border-color:var(--mine-red-dim)} to{border-color:var(--mine-red)} }
+.s-icon { font-size: 20px; margin-bottom: 8px; display: block; }
+.s-label { font-size: 10px; color: var(--mine-muted); font-family: var(--ff-mono); letter-spacing: 0.5px; line-height: 1.4; }
+.s-value { font-size: 28px; font-weight: 700; font-family: var(--ff-mono); margin: 6px 0 2px; line-height: 1; }
+.s-unit { font-size: 11px; color: var(--mine-muted); font-family: var(--ff-mono); }
+.s-status { font-size: 10px; font-family: var(--ff-mono); padding: 2px 8px; border-radius: 3px; margin-top: 8px; display: inline-block; letter-spacing: 0.5px; }
+.s-status.ok { background: rgba(46,164,79,0.12); color: #5fcf82; }
+.s-status.warn { background: rgba(240,165,0,0.12); color: var(--mine-amber); }
+.s-status.crit { background: rgba(229,62,62,0.12); color: #ff7b7b; }
+.c-green { color: #5fcf82; } .c-amber { color: var(--mine-amber); } .c-red { color: #ff7b7b; } .c-blue { color: #60a5fa; } .c-white { color: var(--mine-text); }
+.info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+@media(max-width:600px) { .info-row { grid-template-columns: 1fr; } }
+.info-card { background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 10px; padding: 14px; }
+.info-card .ic-title { font-size: 10px; font-family: var(--ff-mono); color: var(--mine-muted); letter-spacing: 0.5px; margin-bottom: 10px; }
+.ic-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--mine-border); }
+.ic-row:last-child { border-bottom: none; padding-bottom: 0; }
+.ic-key { font-size: 12px; color: var(--mine-muted); font-family: var(--ff-mono); }
+.ic-val { font-size: 13px; font-family: var(--ff-mono); font-weight: 500; }
+.sos-btn { width: 100%; background: linear-gradient(135deg, #991b1b, #e53e3e); border: none; border-radius: 10px; padding: 16px; color: #fff; font-family: var(--ff-head); font-size: 18px; font-weight: 700; letter-spacing: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: opacity 0.2s, transform 0.1s; box-shadow: 0 0 30px rgba(229,62,62,0.25); }
+.sos-btn:hover { opacity: 0.85; }
+.sos-btn:active { transform: scale(0.99); }
+.sos-hint { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); text-align: center; margin-top: 8px; }
+
+/* ====== SUPERVISOR DASHBOARD ====== */
+#sup-dashboard { display: none; }
+.sup-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+@media(max-width:600px) { .sup-stats { grid-template-columns: repeat(2,1fr); } }
+.stat-card { background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 10px; padding: 16px 14px; text-align: center; }
+.st-num { font-size: 36px; font-weight: 700; font-family: var(--ff-mono); line-height: 1; }
+.st-label { font-size: 10px; color: var(--mine-muted); font-family: var(--ff-mono); letter-spacing: 0.5px; margin-top: 6px; }
+.miner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.miner-card { background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 10px; padding: 16px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; position: relative; overflow: hidden; }
+.miner-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--mine-green); transition: background 0.3s; border-radius: 10px 0 0 10px; }
+.miner-card.warn-card::before { background: var(--mine-amber); }
+.miner-card.danger-card::before { background: var(--mine-red); animation: leftBar 0.8s infinite alternate; }
+.miner-card.sos-card::before { background: var(--mine-red); animation: leftBar 0.5s infinite alternate; }
+@keyframes leftBar { from{opacity:1} to{opacity:0.3} }
+.miner-card:hover { border-color: rgba(240,165,0,0.5); transform: translateY(-2px); }
+.mc-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.mc-id { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+.mc-name { font-size: 11px; color: var(--mine-muted); font-family: var(--ff-mono); margin-top: 2px; }
+.mc-badge { font-size: 10px; font-family: var(--ff-mono); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+.mc-badge.on { background: rgba(46,164,79,0.12); color: #5fcf82; }
+.mc-badge.off { background: rgba(122,132,153,0.12); color: var(--mine-muted); }
+.mc-badge.sos { background: rgba(229,62,62,0.2); color: #ff7b7b; font-weight: 600; animation: blink 0.6s infinite; }
+.mc-vitals { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+.mc-v { background: var(--mine-surface); border-radius: 6px; padding: 8px 6px; text-align: center; }
+.mc-v .vnum { font-size: 16px; font-weight: 700; font-family: var(--ff-mono); }
+.mc-v .vlbl { font-size: 9px; color: var(--mine-muted); font-family: var(--ff-mono); margin-top: 3px; letter-spacing: 0.3px; }
+.mc-alerts { font-size: 11px; font-family: var(--ff-mono); min-height: 18px; }
+.mc-alert-item { display: flex; align-items: baseline; gap: 5px; padding: 3px 0; }
+.mc-alert-item.warn { color: var(--mine-amber); }
+.mc-alert-item.crit { color: #ff7b7b; }
+.mc-footer { font-size: 11px; color: var(--mine-muted); font-family: var(--ff-mono); margin-top: 10px; border-top: 1px solid var(--mine-border); padding-top: 8px; display: flex; justify-content: space-between; }
+
+/* ====== MODAL ====== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal-box { background: var(--mine-card); border: 1px solid var(--mine-border); border-radius: 14px; padding: 1.75rem; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+.modal-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0; background: linear-gradient(90deg, var(--mine-amber), #ff6b00); }
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--mine-muted); font-size: 22px; cursor: pointer; line-height: 1; transition: color 0.2s; }
+.modal-close:hover { color: var(--mine-text); }
+.modal-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 11px; font-family: var(--ff-mono); color: var(--mine-muted); margin-bottom: 1.5rem; }
+.modal-sensor-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1rem; }
+.modal-sensor { background: var(--mine-surface); border-radius: 8px; padding: 12px 10px; text-align: center; }
+.ms-icon { font-size: 20px; margin-bottom: 4px; }
+.ms-val { font-size: 20px; font-weight: 700; font-family: var(--ff-mono); margin: 4px 0 2px; }
+.ms-label { font-size: 10px; color: var(--mine-muted); font-family: var(--ff-mono); line-height: 1.3; }
+.ms-status { font-size: 9px; font-family: var(--ff-mono); padding: 2px 7px; border-radius: 3px; margin-top: 6px; display: inline-block; letter-spacing: 0.5px; }
+.alert-feed { background: var(--mine-surface); border-radius: 8px; padding: 14px; }
+.af-title { font-size: 10px; font-family: var(--ff-mono); color: var(--mine-muted); letter-spacing: 0.8px; margin-bottom: 10px; }
+.af-item { display: flex; gap: 10px; font-size: 12px; font-family: var(--ff-mono); padding: 6px 0; border-bottom: 1px solid var(--mine-border); align-items: baseline; }
+.af-item:last-child { border-bottom: none; padding-bottom: 0; }
+.af-time { color: var(--mine-muted); white-space: nowrap; flex-shrink: 0; }
+.af-msg.warn { color: var(--mine-amber); }
+.af-msg.crit { color: #ff7b7b; }
+.af-msg.ok { color: #5fcf82; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--mine-bg); }
+::-webkit-scrollbar-thumb { background: var(--mine-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mine-muted); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-icon-wrap">⛏</div>
+      <div>
+        <div class="login-title">MINE GUARD</div>
+        <div class="login-sub">WEARABLE SAFETY MONITORING SYSTEM v2.1</div>
+      </div>
+    </div>
+    <div class="section-label">Select Role</div>
+    <div class="role-grid">
+      <div class="role-btn active" id="role-emp" onclick="selectRole('employee')">
+        <span class="role-icon">👷</span>
+        <div class="role-name">EMPLOYEE</div>
+        <div class="role-desc">View your vitals</div>
+      </div>
+      <div class="role-btn" id="role-sup" onclick="selectRole('supervisor')">
+        <span class="role-icon">🖥</span>
+        <div class="role-name">SUPERVISOR</div>
+        <div class="role-desc">Monitor all miners</div>
+      </div>
+    </div>
+    <div class="login-field">
+      <label>MINER ID / USERNAME</label>
+      <input type="text" id="login-id" placeholder="e.g. EMP-047 or supervisor" value="EMP-047" />
+    </div>
+    <div class="login-field">
+      <label>PASSWORD</label>
+      <input type="password" id="login-pass" placeholder="••••••••" value="demo1234" />
+    </div>
+    <button class="login-btn" onclick="doLogin()">ENTER MINE GUARD →</button>
+    <div class="login-hint">Demo — any credentials accepted · Select role above</div>
+  </div>
+</div>
+
+<!-- ===== EMPLOYEE DASHBOARD ===== -->
+<div id="emp-dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">⛏</div>
+      <span class="topbar-title">MINE GUARD</span>
+      <span class="topbar-badge badge-emp">EMPLOYEE</span>
+      <span class="conn-pill conn-sim" id="emp-conn">SIM MODE</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="emp-user-label">EMP-047 · Muthu Vel</span>
+      <button class="topbar-logout" onclick="logout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+    <div class="status-bar">
+      <div class="status-bar-left">
+        <div class="pulse-dot"></div>
+        <span class="status-text">DEVICE ONLINE</span>
+        <span class="status-text">·</span>
+        <span class="status-id" id="emp-id-label">EMP-047</span>
+        <span class="status-text">·</span>
+        <span class="status-text" id="emp-zone-label">Sector B2, Level 3</span>
+      </div>
+      <div class="sync-time" id="emp-sync-time">Last sync: just now</div>
+    </div>
+
+    <div class="alert-banner safe" id="emp-alert-banner">
+      <div class="alert-icon">✓</div>
+      <div class="alert-msg">
+        <strong id="alert-title">ALL SYSTEMS CLEAR</strong>
+        <span id="alert-body">Waiting for sensor data…</span>
+      </div>
+    </div>
+
+    <div class="section-label">VITAL SIGNS</div>
+    <div class="sensor-grid" style="margin-bottom:1.25rem;">
+      <div class="sensor-card" id="card-hr">
+        <span class="s-icon">❤️</span>
+        <div class="s-label">HEART RATE</div>
+        <div class="s-value c-white" id="e-hr">--</div>
+        <div class="s-unit">bpm · MAX30102</div>
+        <div class="s-status ok" id="st-hr">—</div>
+      </div>
+      <div class="sensor-card" id="card-spo2">
+        <span class="s-icon">🫁</span>
+        <div class="s-label">SpO₂ LEVEL</div>
+        <div class="s-value c-white" id="e-spo2">--</div>
+        <div class="s-unit">% · MAX30102</div>
+        <div class="s-status ok" id="st-spo2">—</div>
+      </div>
+      <div class="sensor-card" id="card-bodytemp">
+        <span class="s-icon">🌡️</span>
+        <div class="s-label">BODY TEMP</div>
+        <div class="s-value c-white" id="e-bodytemp">--</div>
+        <div class="s-unit">°C · DHT22</div>
+        <div class="s-status ok" id="st-bodytemp">—</div>
+      </div>
+    </div>
+
+    <div class="section-label">GAS & ATMOSPHERE</div>
+    <div class="sensor-grid" style="margin-bottom:1.25rem;">
+      <div class="sensor-card" id="card-co">
+        <span class="s-icon">☁️</span>
+        <div class="s-label">CO — CARBON MONOXIDE</div>
+        <div class="s-value c-white" id="e-co">--</div>
+        <div class="s-unit">ppm · MQ-7</div>
+        <div class="s-status ok" id="st-co">—</div>
+      </div>
+      <div class="sensor-card" id="card-ch4">
+        <span class="s-icon">💨</span>
+        <div class="s-label">CH₄ — METHANE</div>
+        <div class="s-value c-white" id="e-ch4">--</div>
+        <div class="s-unit">% LEL · MQ-4</div>
+        <div class="s-status ok" id="st-ch4">—</div>
+      </div>
+      <div class="sensor-card" id="card-h2s">
+        <span class="s-icon">⚗️</span>
+        <div class="s-label">H₂S — HYDROGEN SULPHIDE</div>
+        <div class="s-value c-white" id="e-h2s">--</div>
+        <div class="s-unit">ppm · MQ-136</div>
+        <div class="s-status ok" id="st-h2s">—</div>
+      </div>
+      <div class="sensor-card" id="card-o2">
+        <span class="s-icon">🔵</span>
+        <div class="s-label">O₂ LEVEL</div>
+        <div class="s-value c-white" id="e-o2">--</div>
+        <div class="s-unit">% · EC Sensor</div>
+        <div class="s-status ok" id="st-o2">—</div>
+      </div>
+      <div class="sensor-card" id="card-smoke">
+        <span class="s-icon">🔥</span>
+        <div class="s-label">SMOKE / LPG</div>
+        <div class="s-value c-white" id="e-smoke">--</div>
+        <div class="s-unit">ppm · MQ-2</div>
+        <div class="s-status ok" id="st-smoke">—</div>
+      </div>
+      <div class="sensor-card" id="card-flame">
+        <span class="s-icon">🌿</span>
+        <div class="s-label">FLAME DETECTED</div>
+        <div class="s-value c-green" id="e-flame" style="font-size:16px;margin-top:8px;">NO FLAME</div>
+        <div class="s-unit">IR Flame Sensor</div>
+        <div class="s-status ok" id="st-flame">CLEAR</div>
+      </div>
+    </div>
+
+    <div class="section-label">ENVIRONMENT & LOCATION</div>
+    <div class="sensor-grid" style="margin-bottom:1.25rem;">
+      <div class="sensor-card">
+        <span class="s-icon">🌡️</span>
+        <div class="s-label">AIR TEMPERATURE</div>
+        <div class="s-value c-white" id="e-airtemp">--</div>
+        <div class="s-unit">°C · BME280</div>
+        <div class="s-status ok">NORMAL</div>
+      </div>
+      <div class="sensor-card">
+        <span class="s-icon">💧</span>
+        <div class="s-label">HUMIDITY</div>
+        <div class="s-value c-blue" id="e-hum">--</div>
+        <div class="s-unit">% · BME280</div>
+        <div class="s-status ok">NORMAL</div>
+      </div>
+      <div class="sensor-card">
+        <span class="s-icon">📏</span>
+        <div class="s-label">DEPTH ESTIMATE</div>
+        <div class="s-value c-white" id="e-depth">--</div>
+        <div class="s-unit">m · BMP280</div>
+        <div class="s-status ok" id="st-depth">—</div>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-card">
+        <div class="ic-title">MOTION & FALL DETECTION · MPU6050</div>
+        <div class="ic-row"><span class="ic-key">Status</span><span class="ic-val c-green" id="m-status">UPRIGHT</span></div>
+        <div class="ic-row"><span class="ic-key">Accel X</span><span class="ic-val" id="m-ax">--</span></div>
+        <div class="ic-row"><span class="ic-key">Accel Y</span><span class="ic-val" id="m-ay">--</span></div>
+        <div class="ic-row"><span class="ic-key">Accel Z</span><span class="ic-val" id="m-az">--</span></div>
+        <div class="ic-row"><span class="ic-key">Gyro Z</span><span class="ic-val" id="m-gz">--</span></div>
+        <div class="ic-row"><span class="ic-key">Fall Alert</span><span class="ic-val c-green" id="m-fall">NONE DETECTED</span></div>
+      </div>
+      <div class="info-card">
+        <div class="ic-title">LOCATION · UWB / LoRa BEACON</div>
+        <div class="ic-row"><span class="ic-key">Zone</span><span class="ic-val c-amber" id="loc-zone">--</span></div>
+        <div class="ic-row"><span class="ic-key">Level</span><span class="ic-val" id="loc-level">--</span></div>
+        <div class="ic-row"><span class="ic-key">Pressure</span><span class="ic-val" id="loc-pressure">--</span></div>
+        <div class="ic-row"><span class="ic-key">Last Update</span><span class="ic-val" id="loc-update">--</span></div>
+      </div>
+    </div>
+
+    <button class="sos-btn" onclick="triggerSOS()">🚨 &nbsp; EMERGENCY SOS</button>
+    <div class="sos-hint">Press to broadcast SOS to all supervisors and activate vibration buzzer</div>
+  </div>
+</div>
+
+<!-- ===== SUPERVISOR DASHBOARD ===== -->
+<div id="sup-dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">⛏</div>
+      <span class="topbar-title">MINE GUARD</span>
+      <span class="topbar-badge badge-sup">SUPERVISOR</span>
+      <span class="conn-pill conn-sim" id="sup-conn">SIM MODE</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user">Supervisor · Control Room</span>
+      <button class="topbar-logout" onclick="logout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+    <div class="sup-stats">
+      <div class="stat-card">
+        <div class="st-num c-green" id="s-active">0</div>
+        <div class="st-label">ACTIVE MINERS</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-num c-amber" id="s-warn">0</div>
+        <div class="st-label">WARNINGS</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-num c-red" id="s-crit">0</div>
+        <div class="st-label">CRITICAL / SOS</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-num" style="color:var(--mine-muted)" id="s-offline">0</div>
+        <div class="st-label">OFFLINE</div>
+      </div>
+    </div>
+
+    <div class="section-label">ALL MINERS — LIVE STATUS &nbsp;·&nbsp; <span style="font-weight:400;opacity:0.6">Click any card for full detail</span></div>
+    <div class="miner-grid" id="miner-grid"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-name">EMP-041</div>
+    <div class="modal-sub" id="modal-sub">—</div>
+    <div class="modal-sensor-grid" id="modal-sensors"></div>
+    <div class="alert-feed" id="modal-alerts"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ============================================================
+   MINE GUARD — frontend logic
+   Tries to fetch live data from Flask /devices.
+   If backend unreachable, falls back to local JS simulation
+   so the UI still works as a demo.
+============================================================ */
+
+let selectedRole = 'employee';
+let myMinerId = 'EMP-047';
+let liveMode = false;
+let lastDevicesPayload = null;
+
+// JS-sim fallback dataset (only used when backend unreachable)
+const fallbackMiners = [
+  { id:'EMP-041', name:'Arjun Kumar',   zone:'Sector A1', level:'L2', status:'ok',     online:true,  hr:78,  spo2:99, co:12, ch4:0.1, h2s:2,  o2:20.9, smoke:8,  airtemp:27, humidity:58, depth:32, alerts:[] },
+  { id:'EMP-042', name:'Priya Devi',    zone:'Sector A2', level:'L2', status:'warn',   online:true,  hr:102, spo2:97, co:38, ch4:0.2, h2s:4,  o2:20.6, smoke:14, airtemp:29, humidity:65, depth:35, alerts:[{l:'warn',m:'Heart rate elevated: 102 bpm'},{l:'warn',m:'CO nearing limit: 38 ppm'}] },
+  { id:'EMP-044', name:'Meena Reddy',   zone:'Sector B2', level:'L3', status:'danger', online:true,  hr:115, spo2:93, co:72, ch4:0.5, h2s:9,  o2:19.8, smoke:28, airtemp:32, humidity:72, depth:50, alerts:[{l:'crit',m:'CO CRITICAL: 72 ppm'},{l:'crit',m:'SpO₂ LOW: 93%'}] },
+  { id:'EMP-047', name:'Muthu Vel',     zone:'Sector B2', level:'L3', status:'warn',   online:true,  hr:94,  spo2:98, co:52, ch4:0.3, h2s:3,  o2:20.8, smoke:12, airtemp:28, humidity:62, depth:47, alerts:[{l:'warn',m:'CO elevated: 52 ppm'}] },
+  { id:'EMP-051', name:'Anbu Mani',     zone:'Sector D2', level:'L2', status:'sos',    online:true,  hr:130, spo2:91, co:88, ch4:1.2, h2s:14, o2:19.2, smoke:55, airtemp:34, humidity:78, depth:36, alerts:[{l:'crit',m:'🚨 SOS TRIGGERED'},{l:'crit',m:'CO CRITICAL: 88 ppm'}] },
+];
+
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('role-emp').classList.toggle('active', r==='employee');
+  document.getElementById('role-sup').classList.toggle('active', r==='supervisor');
+}
+
+function doLogin() {
+  myMinerId = (document.getElementById('login-id').value || 'EMP-047').trim().toUpperCase();
+  document.getElementById('login-screen').style.display = 'none';
+  if (selectedRole === 'employee') {
+    document.getElementById('emp-dashboard').style.display = 'block';
+    document.getElementById('emp-id-label').textContent = myMinerId;
+    document.getElementById('emp-user-label').textContent = myMinerId;
+    startLoop();
+  } else {
+    document.getElementById('sup-dashboard').style.display = 'block';
+    startLoop();
+  }
+}
+
+function logout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('emp-dashboard').style.display = 'none';
+  document.getElementById('sup-dashboard').style.display = 'none';
+}
+
+// ---------- thresholds (mirror backend) ----------
+function statusFor(key, v) {
+  if (typeof v !== 'number') return 'ok';
+  switch (key) {
+    case 'co':       return v > 50  ? 'crit' : v > 35  ? 'warn' : 'ok';
+    case 'spo2':     return v < 92  ? 'crit' : v < 95  ? 'warn' : 'ok';
+    case 'o2':       return v < 19.5? 'crit' : v < 20.0? 'warn' : 'ok';
+    case 'h2s':      return v > 10  ? 'crit' : v > 5   ? 'warn' : 'ok';
+    case 'ch4':      return v > 5   ? 'crit' : v > 1   ? 'warn' : 'ok';
+    case 'smoke':    return v > 150 ? 'crit' : v > 50  ? 'warn' : 'ok';
+    case 'hr':       if (v >= 120 || v <= 50) return 'crit';
+                     if (v >= 100 || v <= 60) return 'warn';
+                     return 'ok';
+    case 'bodytemp': return v >= 39   ? 'crit' : v >= 37.8 ? 'warn' : 'ok';
+    case 'airtemp':  return v >= 40   ? 'crit' : v >= 35   ? 'warn' : 'ok';
+  }
+  return 'ok';
+}
+const colorOf = { ok: 'c-green', warn: 'c-amber', crit: 'c-red' };
+const labelOf = { ok: 'NORMAL',  warn: 'ELEVATED', crit: 'CRITICAL' };
+
+// ---------- main poll loop ----------
+async function pollBackend() {
+  try {
+    const r = await fetch('/devices', { cache: 'no-store' });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json();
+    lastDevicesPayload = j;
+    setMode(true);
+    return j;
+  } catch (e) {
+    setMode(false);
+    return null;
+  }
+}
+
+function setMode(live) {
+  liveMode = live;
+  ['emp-conn','sup-conn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = live ? '● LIVE' : 'SIM MODE';
+    el.className = 'conn-pill ' + (live ? 'conn-live' : 'conn-sim');
+  });
+}
+
+function startLoop() {
+  tick();
+  setInterval(tick, 2000);
+}
+
+async function tick() {
+  const live = await pollBackend();
+  const miners = live ? live.miners : fallbackMiners.map(simStep);
+  const counts = live ? live.counts : computeCounts(miners);
+
+  if (selectedRole === 'employee') renderEmployee(miners);
+  else                              renderSupervisor(miners, counts);
+}
+
+// fallback JS sim — random walk on the few miners
+function simStep(m) {
+  const d = { ...m };
+  if (typeof d.hr === 'number')   d.hr   = Math.max(50, Math.min(150, Math.round(d.hr + (Math.random()-0.5)*4)));
+  if (typeof d.co === 'number')   d.co   = Math.max(0,  Math.round(d.co + (Math.random()-0.4)*3));
+  if (typeof d.spo2 === 'number') d.spo2 = Math.max(85, Math.min(100, Math.round(d.spo2 + (Math.random()-0.5)*1)));
+  return {
+    id: d.id, name: d.name, zone: d.zone, level: d.level,
+    online: d.online, status: d.status,
+    data: { hr:d.hr, spo2:d.spo2, co:d.co, ch4:d.ch4, h2s:d.h2s, o2:d.o2, smoke:d.smoke,
+            airtemp:d.airtemp, humidity:d.humidity, depth:d.depth, bodytemp:36.6, flame:false, fall:false, sos:d.status==='sos' },
+    alerts: d.alerts || []
+  };
+}
+function computeCounts(arr) {
+  const c = { ok:0, warn:0, danger:0, sos:0, offline:0 };
+  arr.forEach(m => { c[m.online ? m.status : 'offline'] = (c[m.online ? m.status : 'offline']||0)+1; });
+  return c;
+}
+
+// ---------- employee render ----------
+function renderEmployee(miners) {
+  const me = miners.find(m => m.id === myMinerId) || miners[0];
+  if (!me) return;
+  const d = me.data || {};
+
+  document.getElementById('emp-zone-label').textContent = (me.zone || '') + (me.level ? ', ' + me.level : '');
+  document.getElementById('emp-sync-time').textContent = 'Last sync: ' + new Date().toLocaleTimeString();
+
+  // helper that updates value + color + status pill + card border
+  function updateCard(prefix, key, value, fmt = v => v) {
+    const st = statusFor(key, typeof value === 'number' ? value : NaN);
+    const valEl = document.getElementById('e-' + prefix);
+    const stEl  = document.getElementById('st-' + prefix);
+    const card  = document.getElementById('card-' + prefix);
+    if (valEl) {
+      valEl.textContent = (value === undefined || value === null || Number.isNaN(value)) ? '--' : fmt(value);
+      valEl.className = 's-value ' + (colorOf[st] || 'c-white');
+    }
+    if (stEl)  { stEl.textContent = st === 'ok' ? 'NORMAL' : st === 'warn' ? 'ELEVATED' : 'CRITICAL'; stEl.className = 's-status ' + st; }
+    if (card)  card.className = 'sensor-card' + (st === 'warn' ? ' warn' : st === 'crit' ? ' danger' : '');
+    return st;
+  }
+
+  const sHR    = updateCard('hr',       'hr',       d.hr);
+  const sSpO2  = updateCard('spo2',     'spo2',     d.spo2);
+  const sBT    = updateCard('bodytemp', 'bodytemp', d.bodytemp, v => v.toFixed(1));
+  const sCO    = updateCard('co',       'co',       d.co);
+  const sCH4   = updateCard('ch4',      'ch4',      d.ch4, v => v.toFixed(2));
+  const sH2S   = updateCard('h2s',      'h2s',      d.h2s);
+  const sO2    = updateCard('o2',       'o2',       d.o2, v => v.toFixed(1));
+  const sSmoke = updateCard('smoke',    'smoke',    d.smoke);
+
+  // flame
+  const flameOn = !!d.flame;
+  const flameEl = document.getElementById('e-flame');
+  flameEl.textContent = flameOn ? 'FLAME!' : 'NO FLAME';
+  flameEl.className = 's-value ' + (flameOn ? 'c-red' : 'c-green');
+  document.getElementById('st-flame').textContent = flameOn ? 'CRITICAL' : 'CLEAR';
+  document.getElementById('st-flame').className = 's-status ' + (flameOn ? 'crit' : 'ok');
+  document.getElementById('card-flame').className = 'sensor-card' + (flameOn ? ' danger' : '');
+
+  // env
+  document.getElementById('e-airtemp').textContent = (typeof d.airtemp === 'number') ? d.airtemp.toFixed(1) : '--';
+  document.getElementById('e-hum').textContent     = (typeof d.humidity === 'number') ? d.humidity.toFixed(0) : '--';
+  document.getElementById('e-depth').textContent   = (typeof d.depth === 'number') ? d.depth.toFixed(0) : '--';
+
+  // motion
+  document.getElementById('m-ax').textContent = (typeof d.ax === 'number') ? d.ax.toFixed(2) + ' g' : '--';
+  document.getElementById('m-ay').textContent = (typeof d.ay === 'number') ? d.ay.toFixed(2) + ' g' : '--';
+  document.getElementById('m-az').textContent = (typeof d.az === 'number') ? d.az.toFixed(2) + ' g' : '--';
+  document.getElementById('m-gz').textContent = (typeof d.gz === 'number') ? d.gz.toFixed(1) + ' °/s' : '--';
+  const fall = !!d.fall;
+  document.getElementById('m-fall').textContent = fall ? '⚠ FALL DETECTED' : 'NONE DETECTED';
+  document.getElementById('m-fall').className = 'ic-val ' + (fall ? 'c-red' : 'c-green');
+  document.getElementById('m-status').textContent = fall ? 'DOWN' : 'UPRIGHT';
+  document.getElementById('m-status').className = 'ic-val ' + (fall ? 'c-red' : 'c-green');
+
+  // location
+  document.getElementById('loc-zone').textContent     = me.zone || '--';
+  document.getElementById('loc-level').textContent    = me.level || '--';
+  document.getElementById('loc-pressure').textContent = (typeof d.pressure === 'number') ? d.pressure.toFixed(0) + ' hPa' : '--';
+  document.getElementById('loc-update').textContent   = 'just now';
+
+  // overall banner
+  const overall = me.status || (d.sos ? 'sos' : 'ok');
+  setBanner(overall, d, me.alerts || []);
+}
+
+function setBanner(overall, d, alerts) {
+  const b = document.getElementById('emp-alert-banner');
+  let type, title, body;
+  if (overall === 'sos' || d.sos) {
+    type = 'danger'; title = '🚨 SOS BROADCAST ACTIVE';
+    body = 'Your emergency alert is being received by all supervisors. Stay calm and remain visible if possible.';
+  } else if (overall === 'danger') {
+    type = 'danger';
+    const crit = alerts.filter(a => a.l === 'crit').slice(-1)[0];
+    title = crit ? crit.m : 'CRITICAL CONDITION';
+    body  = 'Multiple readings unsafe — EVACUATE TO SAFE ZONE IMMEDIATELY.';
+  } else if (overall === 'warn') {
+    type = 'warning';
+    const warn = alerts.filter(a => a.l === 'warn').slice(-1)[0];
+    title = warn ? warn.m : 'CAUTION';
+    body  = 'Readings approaching unsafe thresholds — move toward ventilation and stay alert.';
+  } else {
+    type = 'safe'; title = '✓ ALL SYSTEMS CLEAR';
+    body  = 'All vital and atmospheric readings within safe limits.';
+  }
+  b.className = 'alert-banner ' + type;
+  document.getElementById('alert-title').textContent = title;
+  document.getElementById('alert-body').textContent = body;
+}
+
+// ---------- supervisor render ----------
+function renderSupervisor(miners, counts) {
+  document.getElementById('s-active').textContent  = miners.filter(m => m.online).length;
+  document.getElementById('s-warn').textContent    = counts.warn || 0;
+  document.getElementById('s-crit').textContent    = (counts.danger || 0) + (counts.sos || 0);
+  document.getElementById('s-offline').textContent = counts.offline || miners.filter(m => !m.online).length;
+
+  const grid = document.getElementById('miner-grid');
+  grid.innerHTML = miners.map((m, i) => {
+    const d = m.data || {};
+    const sc = (m.status === 'sos' || m.status === 'danger') ? 'danger-card'
+             : m.status === 'warn' ? 'warn-card' : '';
+    const bc = !m.online ? 'off' : m.status === 'sos' ? 'sos' : 'on';
+    const bl = !m.online ? 'OFFLINE' : m.status === 'sos' ? '🚨 SOS' : 'ONLINE';
+    const hrCol  = colorVar(statusFor('hr',  d.hr));
+    const spoCol = colorVar(statusFor('spo2', d.spo2));
+    const coCol  = colorVar(statusFor('co',  d.co));
+    return `<div class="miner-card ${sc}" onclick="openModal(${i})">
+      <div class="mc-head">
+        <div><div class="mc-id">${m.id}</div><div class="mc-name">${m.name || ''}</div></div>
+        <div class="mc-badge ${bc}">${bl}</div>
+      </div>
+      <div class="mc-vitals">
+        <div class="mc-v"><div class="vnum" style="color:${hrCol}">${valOr(d.hr)}</div><div class="vlbl">HR · bpm</div></div>
+        <div class="mc-v"><div class="vnum" style="color:${spoCol}">${valOr(d.spo2, '%')}</div><div class="vlbl">SpO₂</div></div>
+        <div class="mc-v"><div class="vnum" style="color:${coCol}">${valOr(d.co, ' ppm')}</div><div class="vlbl">CO</div></div>
+      </div>
+      <div class="mc-alerts">
+        ${(m.alerts || []).slice(-2).map(a => `<div class="mc-alert-item ${a.l}">⚠ ${a.m}</div>`).join('')}
+      </div>
+      <div class="mc-footer">
+        <span>📍 ${m.zone || '--'} · ${m.level || ''}</span>
+        <span>Depth: ${typeof d.depth === 'number' ? d.depth.toFixed(0) + 'm' : '--'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function colorVar(st) {
+  if (st === 'crit') return '#ff7b7b';
+  if (st === 'warn') return 'var(--mine-amber)';
+  return '#5fcf82';
+}
+function valOr(v, suffix = '') {
+  if (typeof v !== 'number') return '--';
+  return v + suffix;
+}
+
+// ---------- modal ----------
+function openModal(i) {
+  const miners = lastDevicesPayload ? lastDevicesPayload.miners
+                : fallbackMiners.map(simStep);
+  const m = miners[i];
+  if (!m) return;
+  const d = m.data || {};
+
+  document.getElementById('modal-name').textContent = `${m.id} — ${m.name || ''}`;
+  document.getElementById('modal-sub').textContent =
+    `${m.zone || '--'} · ${m.level || ''} · ${m.online ? 'Online' : 'Offline'} · Depth: ${typeof d.depth === 'number' ? d.depth + 'm' : 'N/A'}`;
+
+  const sc = { ok:'background:rgba(46,164,79,0.12);color:#5fcf82', warn:'background:rgba(240,165,0,0.12);color:var(--mine-amber)', crit:'background:rgba(229,62,62,0.12);color:#ff7b7b' };
+  const sl = { ok:'NORMAL', warn:'ELEVATED', crit:'CRITICAL' };
+
+  const sensors = [
+    { ic:'❤️', lbl:'Heart Rate',  val: valOr(d.hr),                unit:'bpm',   st: statusFor('hr', d.hr) },
+    { ic:'🫁', lbl:'SpO₂',        val: valOr(d.spo2,'%'),          unit:'',      st: statusFor('spo2', d.spo2) },
+    { ic:'🌡️', lbl:'Body Temp',   val: typeof d.bodytemp==='number'?d.bodytemp.toFixed(1):'--', unit:'°C',  st: statusFor('bodytemp', d.bodytemp) },
+    { ic:'☁️', lbl:'CO',          val: valOr(d.co),                unit:'ppm',   st: statusFor('co', d.co) },
+    { ic:'💨', lbl:'CH₄',         val: typeof d.ch4==='number'?d.ch4.toFixed(2):'--', unit:'% LEL', st: statusFor('ch4', d.ch4) },
+    { ic:'⚗️', lbl:'H₂S',         val: valOr(d.h2s),               unit:'ppm',   st: statusFor('h2s', d.h2s) },
+    { ic:'🔵', lbl:'O₂',          val: typeof d.o2==='number'?d.o2.toFixed(1):'--', unit:'%',  st: statusFor('o2', d.o2) },
+    { ic:'🔥', lbl:'Smoke',       val: valOr(d.smoke),             unit:'ppm',   st: statusFor('smoke', d.smoke) },
+    { ic:'🌿', lbl:'Flame',       val: d.flame?'FLAME':'CLEAR',     unit:'',      st: d.flame?'crit':'ok' },
+    { ic:'🌡️', lbl:'Air Temp',    val: typeof d.airtemp==='number'?d.airtemp.toFixed(1):'--', unit:'°C', st: statusFor('airtemp', d.airtemp) },
+    { ic:'💧', lbl:'Humidity',    val: typeof d.humidity==='number'?d.humidity.toFixed(0):'--', unit:'%', st:'ok' },
+    { ic:'📏', lbl:'Depth',       val: typeof d.depth==='number'?d.depth.toFixed(0)+'m':'--', unit:'',    st:'ok' },
+  ];
+
+  document.getElementById('modal-sensors').innerHTML = sensors.map(s => {
+    const vc = s.st === 'crit' ? '#ff7b7b' : s.st === 'warn' ? 'var(--mine-amber)' : '#5fcf82';
+    return `<div class="modal-sensor">
+      <div class="ms-icon">${s.ic}</div>
+      <div class="ms-val" style="color:${vc}">${s.val}</div>
+      <div class="ms-label">${s.lbl}${s.unit?' ('+s.unit+')':''}</div>
+      <div class="ms-status" style="${sc[s.st]}">${sl[s.st]}</div>
+    </div>`;
+  }).join('');
+
+  const alerts = (m.alerts && m.alerts.length) ? m.alerts : [{ l:'ok', m:'All readings within safe limits.' }];
+  document.getElementById('modal-alerts').innerHTML =
+    `<div class="af-title">ALERT LOG</div>` +
+    alerts.map(a => `<div class="af-item">
+        <span class="af-time">${a.ts ? a.ts.split('T')[1] : 'NOW'}</span>
+        <span class="af-msg ${a.l}">${a.m}</span>
+      </div>`).join('');
+
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('detail-modal').classList.remove('open'); }
+
+// ---------- SOS ----------
+async function triggerSOS() {
+  if (liveMode) {
+    try {
+      await fetch('/sos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: myMinerId }) });
+    } catch (e) { /* ignore */ }
+  }
+  setBanner('sos', { sos:true }, []);
+  alert('🚨 SOS SENT\n\nEmergency alert broadcast to supervisors.\nVibration buzzer activated on device.');
+}
+
+document.getElementById('detail-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
